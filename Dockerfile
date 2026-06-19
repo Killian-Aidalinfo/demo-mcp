@@ -9,6 +9,11 @@
 FROM oven/bun:1.2-slim AS base
 WORKDIR /app
 
+# curl : requis par le health check Coolify (déploiement Dockerfile) — l'image bun-slim ne l'a pas.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # --- Dépendances (couche cachée tant que package.json ne change pas) ---
 COPY mcp/package.json ./mcp/
 RUN cd mcp && bun install
@@ -26,7 +31,7 @@ EXPOSE 3000
 # FT_CLIENT_ID / FT_CLIENT_SECRET à fournir via les variables d'env Coolify.
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD bun -e "fetch('http://localhost:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD curl -fsS "http://localhost:${PORT:-3000}/health" || exit 1
 
 USER bun
 CMD ["bun", "mcp/index.ts"]
