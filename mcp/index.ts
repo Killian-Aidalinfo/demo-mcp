@@ -5,7 +5,10 @@
  * forme de tools MCP, plus des tools « assistants » (référentiels, codes INSEE,
  * territoires) pour aider un modèle à construire des requêtes valides.
  *
- * Lancement : `bun mcp/index.ts`  (transport stdio)
+ * Lancement :
+ *   - stdio (défaut, pour npx / install npm) : `bun mcp/index.ts`
+ *   - HTTP (pour Docker / Coolify)           : `MCP_TRANSPORT=http bun mcp/index.ts`
+ *                                              ou `bun mcp/index.ts --http`
  * Pré-requis : FT_CLIENT_ID / FT_CLIENT_SECRET dans .env (cf. README).
  *
  * ⚠️ stdio : stdout est réservé au JSON-RPC. Tous les logs vont sur stderr.
@@ -24,7 +27,23 @@ export function creerServeur(): McpServer {
   return server;
 }
 
+/** Vrai si le transport HTTP est demandé (env `MCP_TRANSPORT=http` ou flag `--http`). */
+function transportHttpDemande(): boolean {
+  return (
+    process.env.MCP_TRANSPORT?.toLowerCase() === "http" ||
+    process.argv.includes("--http")
+  );
+}
+
 async function main() {
+  // Transport HTTP : délégué à http.ts (nécessite Bun). Import dynamique pour
+  // que le build npm (stdio, target node) n'embarque pas le code Bun.serve.
+  if (transportHttpDemande()) {
+    const { demarrerServeurHttp } = await import("./http");
+    demarrerServeurHttp();
+    return;
+  }
+
   if (!process.env.FT_CLIENT_ID || !process.env.FT_CLIENT_SECRET) {
     console.error(
       "⚠️  FT_CLIENT_ID / FT_CLIENT_SECRET absents de l'environnement — les appels API échoueront.",

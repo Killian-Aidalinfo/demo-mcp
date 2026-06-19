@@ -1,0 +1,22 @@
+# On ne construit que le paquet mcp/ ; tout le reste est inutile à l'image.
+node_modules
+mcp/node_modules
+mcp/dist
+.git
+.github
+.claude
+docs
+
+# Données / artefacts de la démo (dashboard, datasets) — pas nécessaires au serveur MCP
+data.sqlite
+*.geojson
+*.json
+!mcp/package.json
+dashboard-data.js
+index.html
+index.ts
+mcp.ts
+fetch-data.ts
+
+.env
+*.log
