@@ -36,18 +36,24 @@ export function enregistrerToolsOffres(server: McpServer): void {
       const resultat = await rechercherOffres(criteres, maxResultats);
       const apercu = resultat.offres
         .slice(0, 10)
-        .map(
-          (o, i) =>
-            `${i + 1}. ${o.intitule ?? "—"} — ${o.entreprise?.nom ?? "?"} ` +
-            `(${o.lieuTravail?.libelle ?? "?"}, ${o.typeContratLibelle ?? o.typeContrat ?? "?"})`,
-        )
+        .map((o, i) => {
+          const url =
+            o.origineOffre?.urlOrigine ??
+            (o.id ? `https://candidat.francetravail.fr/offres/recherche/detail/${o.id}` : null);
+          return (
+            `${i + 1}. [${o.id ?? "?"}] ${o.intitule ?? "—"} — ${o.entreprise?.nom ?? "?"} ` +
+            `(${o.lieuTravail?.libelle ?? "?"}, ${o.typeContratLibelle ?? o.typeContrat ?? "?"})` +
+            (url ? `\n   ${url}` : "")
+          );
+        })
         .join("\n");
       return {
         content: [
           {
             type: "text",
             text:
-              `${resultat.recuperees} offre(s) récupérée(s) sur ${resultat.total} disponible(s).\n\n${apercu}`,
+              `${resultat.recuperees} offre(s) récupérée(s) sur ${resultat.total} disponible(s). ` +
+              `L'identifiant entre crochets [ID] est utilisable avec \`consulter_offre\`.\n\n${apercu}`,
           },
         ],
         structuredContent: resultat,
@@ -82,11 +88,12 @@ export function enregistrerToolsOffres(server: McpServer): void {
           {
             type: "text",
             text:
-              `${offre.intitule ?? "—"}\n` +
+              `${offre.intitule ?? "—"} [${offre.id ?? id}]\n` +
               `Entreprise : ${offre.entreprise?.nom ?? "—"}\n` +
               `Lieu : ${offre.lieuTravail?.libelle ?? "—"}\n` +
               `Contrat : ${offre.typeContratLibelle ?? offre.typeContrat ?? "—"}\n` +
-              `Salaire : ${offre.salaire?.libelle ?? "—"}\n\n` +
+              `Salaire : ${offre.salaire?.libelle ?? "—"}\n` +
+              `Lien : ${offre.origineOffre?.urlOrigine ?? `https://candidat.francetravail.fr/offres/recherche/detail/${offre.id ?? id}`}\n\n` +
               `${(offre.description ?? "").slice(0, 800)}`,
           },
         ],
