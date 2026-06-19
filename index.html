@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>France Travail — Salaires & offres IT 2026</title>
+    <style>
+      :root {
+        --bg: #0f1226;
+        --panel: #181c3a;
+        --panel-2: #20254d;
+        --ink: #eef1ff;
+        --muted: #9aa3d4;
+        --line: #2c3268;
+        --dev: #4f8cff;
+        --devops: #ff7a59;
+        --sysadmin: #28c2a0;
+        --accent: #7c6cff;
+        --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+        font-synthesis: none;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 600px at 80% -10%, #232a5e 0%, var(--bg) 55%);
+        color: var(--ink);
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.45;
+      }
+      header {
+        padding: 28px clamp(16px, 4vw, 48px) 8px;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(22px, 3vw, 32px);
+        letter-spacing: -0.02em;
+      }
+      .sub { color: var(--muted); margin-top: 4px; font-size: 14px; }
+      .wrap { padding: 0 clamp(16px, 4vw, 48px) 48px; }
+
+      /* Contrôles */
+      .controls {
+        display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: flex-end;
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 16px; padding: 16px 20px; margin: 18px 0 22px;
+        box-shadow: var(--shadow);
+      }
+      .ctrl label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 7px; }
+      .seg { display: inline-flex; background: var(--panel-2); border-radius: 10px; padding: 3px; gap: 2px; }
+      .seg button {
+        border: 0; background: transparent; color: var(--muted); cursor: pointer;
+        padding: 7px 13px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: 0.15s;
+      }
+      .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(124, 108, 255, 0.4); }
+      .seg button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+
+      /* Layout */
+      .grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px; }
+      @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+      .card {
+        background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+        padding: 18px 20px; box-shadow: var(--shadow);
+      }
+      .card h2 { margin: 0 0 2px; font-size: 16px; }
+      .card .hint { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+
+      /* Carte */
+      svg.map { width: 100%; height: auto; display: block; }
+      .region { stroke: var(--bg); stroke-width: 0.8; cursor: pointer; transition: filter 0.15s, opacity 0.15s; }
+      .region:hover { filter: brightness(1.15); }
+      .region.selected { stroke: #fff; stroke-width: 2; }
+      .legend { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+      .legend .bar { height: 12px; flex: 1; border-radius: 6px; }
+
+      /* Tooltip */
+      #tip {
+        position: fixed; pointer-events: none; z-index: 30; opacity: 0; transition: opacity 0.1s;
+        background: #0b0e22; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+        font-size: 12.5px; box-shadow: var(--shadow); max-width: 260px;
+      }
+      #tip b { font-size: 13.5px; }
+      #tip .row { display: flex; justify-content: space-between; gap: 16px; margin-top: 4px; color: var(--muted); }
+      #tip .row span:last-child { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+      /* Barres comparaison */
+      .bars { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+      .barrow { display: grid; grid-template-columns: 130px 1fr auto; align-items: center; gap: 12px; }
+      .barrow .name { font-size: 13px; font-weight: 600; }
+      .bartrack { background: var(--panel-2); border-radius: 8px; height: 22px; overflow: hidden; }
+      .barfill { height: 100%; border-radius: 8px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+      .barval { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13.5px; min-width: 64px; text-align: right; }
+      .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+
+      /* offres groupées */
+      .offgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 4px; }
+      .offcell { background: var(--panel-2); border-radius: 12px; padding: 12px 14px; }
+      .offcell .m { font-size: 12px; color: var(--muted); }
+      .offcell .big { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+      .offcell .split { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+      .offcell .split b { color: var(--ink); }
+
+      /* Tableau */
+      table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+      th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+      th:first-child, td:first-child { text-align: left; }
+      th { color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+      th:hover { color: var(--ink); }
+      tbody tr { cursor: pointer; }
+      tbody tr:hover { background: var(--panel-2); }
+      tbody tr.selected { background: rgba(124, 108, 255, 0.18); }
+      td.num { font-variant-numeric: tabular-nums; }
+      .foot { color: var(--muted); font-size: 12px; margin-top: 26px; text-align: center; }
+      .pill { display: inline-block; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 11.5px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Salaires &amp; offres d'emploi IT — <span id="annee"></span></h1>
+      <div class="sub">Source : APIs France Travail (Marché du travail &amp; Offres d'emploi). <span class="pill" id="maj"></span></div>
+    </header>
+
+    <div class="wrap">
+      <div class="controls">
+        <div class="ctrl">
+          <label>Indicateur cartographié</label>
+          <div class="seg" id="seg-metric">
+            <button data-v="salaire" aria-pressed="true">💶 Salaire moyen</button>
+            <button data-v="offres">📋 Nombre d'offres</button>
+          </div>
+        </div>
+        <div class="ctrl">
+          <label>Métier</label>
+          <div class="seg" id="seg-metier"></div>
+        </div>
+        <div class="ctrl" id="ctrl-salaire">
+          <label>Type de salaire</label>
+          <div class="seg" id="seg-saltype">
+            <button data-v="debutant">Débutant</button>
+            <button data-v="moyen" aria-pressed="true">Moyen</button>
+            <button data-v="experimente">Expérimenté</button>
+          </div>
+        </div>
+        <div class="ctrl" id="ctrl-diplome" style="display:none">
+          <label>Niveau de diplôme</label>
+          <div class="seg" id="seg-diplome">
+            <button data-v="total" aria-pressed="true">Tous</button>
+            <button data-v="bac3">Bac+3 / +4</button>
+            <button data-v="bac5">Bac+5 et +</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h2 id="map-title">Carte</h2>
+          <div class="hint" id="map-hint">Survolez une région ; cliquez pour la sélectionner.</div>
+          <svg class="map" id="map" viewBox="0 0 600 620" role="img" aria-label="Carte de France par région"></svg>
+          <div class="legend">
+            <span id="leg-min">—</span>
+            <div class="bar" id="leg-bar"></div>
+            <span id="leg-max">—</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 id="cmp-title">Comparaison des 3 métiers</h2>
+          <div class="hint" id="cmp-scope">France entière</div>
+
+          <div style="margin:14px 0 22px">
+            <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Salaire (€ brut / an)</div>
+            <div class="bars" id="bars-sal"></div>
+          </div>
+
+          <div>
+            <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Offres 2026 par niveau de diplôme</div>
+            <div class="offgrid" id="off-cells"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:22px">
+        <h2>Détail par région</h2>
+        <div class="hint">Cliquez sur une colonne pour trier, sur une ligne pour sélectionner la région sur la carte.</div>
+        <div style="overflow-x:auto">
+          <table id="table"></table>
+        </div>
+      </div>
+
+      <div class="foot">
+        Salaires : indicateur « salaires en poste » France Travail (FAP, dernier millésime publié — antérieur à 2026),
+        valeurs mensuelles converties en brut annuel (× 12).
+        Offres : créées en <span class="annee2"></span>. « DevOps / Ing. systèmes » = union de codes <b>ROME 4.0</b>
+        (M1827 DevOps, M1879/M1860/M1876 Cloud, M1802 Expert systèmes &amp; réseaux, M1884 systèmes/réseaux/sécurité, M1839 Architecte systèmes &amp; réseaux),
+        dédupliqués côté API ; son salaire est rapporté à la FAP « ingénieurs &amp; cadres informatique » (M2Z90).
+      </div>
+    </div>
+
+    <div id="tip"></div>
+
+    <script src="./dashboard-data.js"></script>
+    <script>
+      const D = window.FT_DATA;
+      const METIER_COLORS = { dev: "#4f8cff", devops: "#ff7a59", sysadmin: "#28c2a0" };
+      const fmtEur = (n) => (n == null ? "—" : new Intl.NumberFormat("fr-FR").format(Math.round(n)) + " €");
+      // salaires API = mensuels → affichés en brut annuel (× 12)
+      const fmtSal = (mensuel) => (mensuel == null ? "—" : new Intl.NumberFormat("fr-FR").format(Math.round(mensuel * 12)) + " €");
+      const fmtNum = (n) => new Intl.NumberFormat("fr-FR").format(n);
+
+      // état
+      const state = { metric: "salaire", metier: "dev", saltype: "moyen", diplome: "total", region: null, sort: { key: "value", dir: -1 } };
+
+      document.getElementById("annee").textContent = D.annee;
+      document.querySelectorAll(".annee2").forEach((e) => (e.textContent = D.annee));
+      document.getElementById("maj").textContent = "généré le " + new Date(D.genereLe).toLocaleString("fr-FR");
+
+      // segmented "métier"
+      const segMetier = document.getElementById("seg-metier");
+      D.metiers.forEach((m, i) => {
+        const b = document.createElement("button");
+        b.dataset.v = m.id;
+        b.innerHTML = `<span class="dot" style="background:${METIER_COLORS[m.id]}"></span>${m.label.split(" ")[0]}`;
+        b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+        segMetier.appendChild(b);
+      });
+
+      // helpers de données
+      const metierLabel = (id) => D.metiers.find((m) => m.id === id).label;
+      function valeurRegion(reg, st = state) {
+        if (st.metric === "salaire") return reg.salaires[st.metier]?.[st.saltype] ?? null;
+        return reg.offres[st.metier]?.[st.diplome] ?? null;
+      }
+
+      // ─── Projection GeoJSON → SVG ───────────────────────────────────────────
+      const W = 600, H = 620, PAD = 20;
+      let bounds = null;
+      function computeBounds() {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const visit = (coords) => {
+          for (const c of coords) {
+            if (typeof c[0] === "number") {
+              minX = Math.min(minX, c[0]); maxX = Math.max(maxX, c[0]);
+              minY = Math.min(minY, c[1]); maxY = Math.max(maxY, c[1]);
+            } else visit(c);
+          }
+        };
+        D.geojson.features.forEach((f) => visit(f.geometry.coordinates));
+        bounds = { minX, minY, maxX, maxY };
+      }
+      computeBounds();
+      const meanLat = ((bounds.minY + bounds.maxY) / 2) * (Math.PI / 180);
+      const aspect = Math.cos(meanLat); // correction longitude
+      function project([lon, lat]) {
+        const bw = (bounds.maxX - bounds.minX) * aspect, bh = bounds.maxY - bounds.minY;
+        const scale = Math.min((W - 2 * PAD) / bw, (H - 2 * PAD) / bh);
+        const x = PAD + (lon - bounds.minX) * aspect * scale + (W - 2 * PAD - bw * scale) / 2;
+        const y = PAD + (bounds.maxY - lat) * scale + (H - 2 * PAD - bh * scale) / 2;
+        return [x, y];
+      }
+      function ring(coords) {
+        return coords.map((c, i) => (i ? "L" : "M") + project(c).map((n) => n.toFixed(1)).join(",")).join("") + "Z";
+      }
+      function pathFor(geom) {
+        const polys = geom.type === "MultiPolygon" ? geom.coordinates : [geom.coordinates];
+        return polys.map((poly) => poly.map(ring).join("")).join("");
+      }
+
+      // ─── Échelle de couleur ────────────────────────────────────────────────
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function colorScale(t) {
+        // dégradé sombre → couleur du métier (ou accent en mode offres)
+        const base = state.metric === "salaire"
+          ? hexToRgb(METIER_COLORS[state.metier])
+          : { r: 124, g: 108, b: 255 };
+        const lo = { r: 38, g: 44, b: 92 };
+        const r = lerp(lo.r, base.r, t), g = lerp(lo.g, base.g, t), b = lerp(lo.b, base.b, t);
+        return `rgb(${r | 0},${g | 0},${b | 0})`;
+      }
+      function hexToRgb(h) { return { r: parseInt(h.slice(1, 3), 16), g: parseInt(h.slice(3, 5), 16), b: parseInt(h.slice(5, 7), 16) }; }
+
+      // ─── Rendu carte ─────────────────────────────────────────────────────────
+      const svg = document.getElementById("map");
+      const tip = document.getElementById("tip");
+      const regionByCode = Object.fromEntries(D.regions.map((r) => [r.code, r]));
+
+      function renderMap() {
+        const vals = D.regions.map((r) => valeurRegion(r)).filter((v) => v != null);
+        const min = Math.min(...vals), max = Math.max(...vals);
+        svg.innerHTML = "";
+        D.geojson.features.forEach((f) => {
+          const reg = regionByCode[f.properties.code];
+          const v = reg ? valeurRegion(reg) : null;
+          const t = v == null || max === min ? 0.5 : (v - min) / (max - min);
+          const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          p.setAttribute("d", pathFor(f.geometry));
+          p.setAttribute("fill", v == null ? "#23284a" : colorScale(t));
+          p.setAttribute("class", "region" + (state.region === f.properties.code ? " selected" : ""));
+          p.dataset.code = f.properties.code;
+          p.addEventListener("mousemove", (e) => showTip(e, reg));
+          p.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+          p.addEventListener("click", () => selectRegion(state.region === f.properties.code ? null : f.properties.code));
+          svg.appendChild(p);
+        });
+        // légende
+        const unit = state.metric === "salaire" ? fmtSal : fmtNum;
+        document.getElementById("leg-min").textContent = isFinite(min) ? unit(min) : "—";
+        document.getElementById("leg-max").textContent = isFinite(max) ? unit(max) : "—";
+        document.getElementById("leg-bar").style.background = `linear-gradient(90deg, ${colorScale(0)}, ${colorScale(1)})`;
+      }
+
+      function showTip(e, reg) {
+        if (!reg) return;
+        const s = reg.salaires, o = reg.offres;
+        tip.innerHTML =
+          `<b>${reg.nom}</b>` +
+          D.metiers.map((m) => {
+            const v = state.metric === "salaire" ? fmtSal(s[m.id]?.[state.saltype]) : fmtNum(o[m.id]?.[state.diplome] ?? 0);
+            return `<div class="row"><span><span class="dot" style="background:${METIER_COLORS[m.id]}"></span>${metierLabel(m.id)}</span><span>${v}</span></div>`;
+          }).join("");
+        tip.style.left = Math.min(e.clientX + 16, window.innerWidth - 270) + "px";
+        tip.style.top = e.clientY + 16 + "px";
+        tip.style.opacity = 1;
+      }
+
+      // ─── Panneau comparaison ───────────────────────────────────────────────
+      function renderCompare() {
+        const scope = state.region ? regionByCode[state.region] : null;
+        document.getElementById("cmp-scope").textContent = scope ? scope.nom : "France entière";
+
+        // Salaires : 3 métiers
+        const salData = D.metiers.map((m) => ({
+          id: m.id, label: metierLabel(m.id),
+          val: scope ? scope.salaires[m.id]?.[state.saltype] : moyenneNationaleSal(m.id, state.saltype),
+        }));
+        const salMax = Math.max(...salData.map((d) => d.val || 0), 1);
+        document.getElementById("bars-sal").innerHTML = salData.map((d) =>
+          `<div class="barrow">
+             <div class="name"><span class="dot" style="background:${METIER_COLORS[d.id]}"></span>${d.label}</div>
+             <div class="bartrack"><div class="barfill" style="width:${((d.val || 0) / salMax) * 100}%;background:${METIER_COLORS[d.id]}"></div></div>
+             <div class="barval">${fmtSal(d.val)}</div>
+           </div>`).join("");
+
+        // Offres par diplôme
+        document.getElementById("off-cells").innerHTML = D.metiers.map((m) => {
+          const o = scope ? scope.offres[m.id] : sommeNationaleOff(m.id);
+          return `<div class="offcell">
+             <div class="m"><span class="dot" style="background:${METIER_COLORS[m.id]}"></span>${metierLabel(m.id)}</div>
+             <div class="big">${fmtNum(o.total)}</div>
+             <div class="split"><span>Bac+3 <b>${fmtNum(o.bac3)}</b></span><span>Bac+5 <b>${fmtNum(o.bac5)}</b></span></div>
+           </div>`;
+        }).join("");
+      }
+      function moyenneNationaleSal(metier, type) {
+        const vs = D.regions.map((r) => r.salaires[metier]?.[type]).filter((v) => v != null);
+        return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
+      }
+      function sommeNationaleOff(metier) {
+        return D.regions.reduce((acc, r) => {
+          const o = r.offres[metier]; acc.total += o.total; acc.bac3 += o.bac3; acc.bac5 += o.bac5; return acc;
+        }, { total: 0, bac3: 0, bac5: 0 });
+      }
+
+      // ─── Tableau ───────────────────────────────────────────────────────────
+      function renderTable() {
+        const unit = state.metric === "salaire" ? fmtSal : fmtNum;
+        const rows = D.regions.map((r) => ({ code: r.code, nom: r.nom, value: valeurRegion(r) ?? -1 }));
+        const { key, dir } = state.sort;
+        rows.sort((a, b) => (key === "nom" ? a.nom.localeCompare(b.nom) : a.value - b.value) * dir);
+        const colTitle = state.metric === "salaire"
+          ? `Salaire ${state.saltype} brut/an · ${metierLabel(state.metier)}`
+          : `Offres ${state.diplome === "total" ? "(tous)" : state.diplome} · ${metierLabel(state.metier)}`;
+        const t = document.getElementById("table");
+        t.innerHTML =
+          `<thead><tr><th data-k="nom">Région</th><th data-k="value">${colTitle}</th></tr></thead>` +
+          `<tbody>${rows.map((r) =>
+            `<tr data-code="${r.code}" class="${state.region === r.code ? "selected" : ""}">
+               <td>${r.nom}</td><td class="num">${r.value < 0 ? "—" : unit(r.value)}</td></tr>`).join("")}</tbody>`;
+        t.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
+          const k = th.dataset.k;
+          state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : (k === "nom" ? 1 : -1) };
+          renderTable();
+        }));
+        t.querySelectorAll("tbody tr").forEach((tr) => tr.addEventListener("click", () =>
+          selectRegion(state.region === tr.dataset.code ? null : tr.dataset.code)));
+      }
+
+      // ─── Titres dynamiques ───────────────────────────────────────────────────
+      function renderTitles() {
+        if (state.metric === "salaire") {
+          document.getElementById("map-title").textContent = `Salaire ${state.saltype} brut/an — ${metierLabel(state.metier)}`;
+          document.getElementById("map-hint").textContent = "Couleur = salaire brut annuel. Survolez pour comparer les 3 métiers.";
+        } else {
+          const lib = state.diplome === "total" ? "tous niveaux" : state.diplome === "bac3" ? "Bac+3/+4" : "Bac+5 et plus";
+          document.getElementById("map-title").textContent = `Offres ${D.annee} (${lib}) — ${metierLabel(state.metier)}`;
+          document.getElementById("map-hint").textContent = "Couleur = nombre d'offres. Survolez pour comparer les 3 métiers.";
+        }
+      }
+
+      // ─── Sélection / re-render ─────────────────────────────────────────────
+      function selectRegion(code) { state.region = code; renderAll(); }
+      function renderAll() { renderTitles(); renderMap(); renderCompare(); renderTable(); }
+
+      // ─── Wiring contrôles ─────────────────────────────────────────────────
+      function wireSeg(id, key, after) {
+        const seg = document.getElementById(id);
+        seg.addEventListener("click", (e) => {
+          const b = e.target.closest("button"); if (!b) return;
+          seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", "false"));
+          b.setAttribute("aria-pressed", "true");
+          state[key] = b.dataset.v;
+          after && after();
+          renderAll();
+        });
+      }
+      wireSeg("seg-metric", "metric", () => {
+        document.getElementById("ctrl-salaire").style.display = state.metric === "salaire" ? "" : "none";
+        document.getElementById("ctrl-diplome").style.display = state.metric === "offres" ? "" : "none";
+      });
+      wireSeg("seg-metier", "metier");
+      wireSeg("seg-saltype", "saltype");
+      wireSeg("seg-diplome", "diplome");
+
+      renderAll();
+    </script>
+  </body>
+</html>

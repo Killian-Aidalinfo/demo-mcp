@@ -1,0 +1,38 @@
+{
+  "name": "cesi-mcp-france-travail",
+  "version": "0.1.0",
+  "description": "Serveur MCP (stdio) exposant les APIs France Travail (Offres d'emploi v2 & Marché du travail) sous forme de tools.",
+  "type": "module",
+  "bin": {
+    "cesi-mcp-france-travail": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "bun build index.ts --target=node --packages=external --outdir dist --banner '#!/usr/bin/env node'",
+    "prepublishOnly": "bun run build",
+    "test": "bun test"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "france-travail",
+    "pole-emploi",
+    "offres-emploi",
+    "marche-du-travail"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Killian-Aidalinfo/demo-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "3"
+  }
+}

@@ -1,0 +1,58 @@
+name: Publier le MCP sur npm
+
+# Publie `cesi-mcp-france-travail` quand la version du package.json change.
+# Pas de tag : on compare la version locale à celle publiée sur npm et on ne
+# publie que si elle est nouvelle. Idempotent — un push sans bump = no-op.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp/**"
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # setup-node configure le registry + l'auth via NODE_AUTH_TOKEN pour `npm publish`.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Installer les dépendances
+        run: bun install --frozen-lockfile
+        working-directory: . # lockfile (bun.lock) à la racine du repo
+
+      - name: Builder le bundle Node
+        run: bun run build
+
+      - name: Vérifier si la version est déjà publiée
+        id: check
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view "$PKG_NAME" version 2>/dev/null || echo "none")
+          echo "Locale=$PKG_VERSION / Publiée=$PUBLISHED"
+          if [ "$PKG_VERSION" = "$PUBLISHED" ]; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Version $PKG_VERSION déjà publiée — rien à faire."
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publier sur npm
+        if: steps.check.outputs.should_publish == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

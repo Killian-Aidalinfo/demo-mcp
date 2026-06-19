@@ -1,0 +1,22 @@
+{
+  "name": "demo-mcp",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "mcp": "bun mcp/index.ts",
+    "demo": "bun index.ts",
+    "test": "bun test mcp/"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^26.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "3"
+  }
+}

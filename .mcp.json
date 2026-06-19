@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "test-mcp": {
+      "command": "bun",
+      "args": ["/home/killian/Documents/cesi/inf83-code/demo-mcp-data-gouv/demo-mcp/mcp.ts"]
+    }
+  }
+}
