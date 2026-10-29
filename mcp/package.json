@@ -1,10 +1,10 @@
 {
-  "name": "cesi-mcp-france-travail",
+  "name": "@ninapepite/mcp-france-travail",
   "version": "0.2.0",
   "description": "Serveur MCP (stdio/HTTP) exposant les APIs France Travail (Offres d'emploi v2 & Marché du travail) et La bonne alternance (offres et formations en alternance) sous forme de tools.",
   "type": "module",
   "bin": {
-    "cesi-mcp-france-travail": "dist/index.js"
+    "mcp-france-travail": "dist/index.js"
   },
   "files": [
     "dist",

@@ -75,7 +75,7 @@ Bun charge automatiquement le `.env`.
 
 ## Utilisation (npx)
 
-Le serveur est publié sur npm sous **`cesi-mcp-france-travail`** et tourne sous Node
+Le serveur est publié sur npm sous **`@ninapepite/mcp-france-travail`** (anciennement `cesi-mcp-france-travail`, figé en 0.1.0) et tourne sous Node
 (≥ 18) — aucune installation de Bun n'est requise côté utilisateur. Pour le brancher sur
 un client MCP (Claude Code, etc.), ajouter dans la config MCP du client :
 
@@ -84,7 +84,7 @@ un client MCP (Claude Code, etc.), ajouter dans la config MCP du client :
   "mcpServers": {
     "france-travail": {
       "command": "npx",
-      "args": ["-y", "cesi-mcp-france-travail"],
+      "args": ["-y", "@ninapepite/mcp-france-travail"],
       "env": {
         "FT_CLIENT_ID": "...",
         "FT_CLIENT_SECRET": "...",

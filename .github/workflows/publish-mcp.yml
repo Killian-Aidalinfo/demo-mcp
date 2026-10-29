@@ -1,6 +1,6 @@
 name: Publier le MCP sur npm
 
-# Publie `cesi-mcp-france-travail` quand la version du package.json change.
+# Publie `@ninapepite/mcp-france-travail` quand la version du package.json change.
 # Pas de tag : on compare la version locale à celle publiée sur npm et on ne
 # publie que si elle est nouvelle. Idempotent — un push sans bump = no-op.
 
