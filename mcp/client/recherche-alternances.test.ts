@@ -34,10 +34,22 @@ describe("fusionnerAlternances", () => {
 
   test("retire un doublon approché (même intitulé + entreprise, casse/accents/ponctuation)", () => {
     const r = fusionnerAlternances(
-      [offreFt({ id: "1", intitule: "Alternant Administrateur Systèmes (H/F)", entreprise: "Ville de Nancy" })],
-      [offreLba({ id: "L1", intitule: "alternant administrateur systemes h f", entreprise: "VILLE DE NANCY" })],
+      [offreFt({ id: "1", intitule: "Alternant Administrateur Systèmes (H/F)", entreprise: "Ville de Nancy", codePostal: "54000" })],
+      [offreLba({ id: "L1", intitule: "alternant administrateur systemes h f", entreprise: "VILLE DE NANCY", adresse: "1 place Stanislas 54000 NANCY" })],
     );
     expect(r.offres.length).toBe(1);
+  });
+
+  test("garde la même annonce publiée dans des communes différentes", () => {
+    const r = fusionnerAlternances(
+      [
+        offreFt({ id: "1", intitule: "Commercial en alternance", entreprise: "Pigier", codePostal: "54520" }),
+        offreFt({ id: "2", intitule: "Commercial en alternance", entreprise: "Pigier", codePostal: "54300" }),
+      ],
+      [offreLba({ id: "L1", intitule: "Commercial en alternance", entreprise: "Pigier", adresse: "54000 NANCY" })],
+    );
+    expect(r.offres.length).toBe(3);
+    expect(r.doublonsRetires).toBe(0);
   });
 
   test("garde les offres distinctes, plus récentes d'abord, avec le bon tool de détail", () => {

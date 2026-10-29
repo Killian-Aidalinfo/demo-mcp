@@ -62,17 +62,30 @@ export function unifierOffreLba(o: ResumeOffreAlternance): OffreUnifiee {
   };
 }
 
-/** Clé de rapprochement approximative : même intitulé chez la même entreprise. */
-function cleApprochee(intitule: string | null, entreprise: string | null): string | null {
-  if (!intitule || !entreprise) return null;
+/** Premier code postal (5 chiffres) trouvé dans une adresse libre. */
+export function extraireCodePostal(adresse: string | null): string | null {
+  return adresse?.match(/\b\d{5}\b/)?.[0] ?? null;
+}
+
+/**
+ * Clé de rapprochement approximative : même intitulé, même entreprise, même code postal.
+ * Le code postal évite de fusionner une annonce publiée dans plusieurs communes
+ * (fréquent chez les écoles et les agences), qui correspond à des postes distincts.
+ */
+function cleApprochee(
+  intitule: string | null,
+  entreprise: string | null,
+  codePostal: string | null,
+): string | null {
+  if (!intitule || !entreprise || !codePostal) return null;
   const simplifier = (t: string) => normaliser(t).replace(/\W+/g, " ").trim();
-  return `${simplifier(intitule)}|${simplifier(entreprise)}`;
+  return `${simplifier(intitule)}|${simplifier(entreprise)}|${codePostal}`;
 }
 
 /**
  * Fusionne les deux sources sans doublon (fonction pure).
  * Une offre La bonne alternance est écartée si elle reprend une offre France Travail
- * déjà présente : même identifiant partenaire, ou même intitulé + entreprise.
+ * déjà présente : même identifiant partenaire, ou même intitulé + entreprise + code postal.
  * Tri final : plus récentes d'abord.
  */
 export function fusionnerAlternances(
@@ -85,7 +98,7 @@ export function fusionnerAlternances(
   let doublonsRetires = 0;
 
   for (const o of franceTravail) {
-    const cle = cleApprochee(o.intitule, o.entreprise);
+    const cle = cleApprochee(o.intitule, o.entreprise, o.codePostal);
     if (cle && clesVues.has(cle)) {
       doublonsRetires++;
       continue;
@@ -95,7 +108,7 @@ export function fusionnerAlternances(
   }
 
   for (const o of lba) {
-    const cle = cleApprochee(o.intitule, o.entreprise);
+    const cle = cleApprochee(o.intitule, o.entreprise, extraireCodePostal(o.adresse));
     if ((o.idPartenaire && idsFt.has(o.idPartenaire)) || (cle && clesVues.has(cle))) {
       doublonsRetires++;
       continue;
