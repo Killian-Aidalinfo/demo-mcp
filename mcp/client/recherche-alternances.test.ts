@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from "bun:test";
-import { fusionnerAlternances, rechercherAlternances } from "./recherche-alternances";
+import { fusionnerAlternances, fusionnerRecruteurs, rechercherAlternances } from "./recherche-alternances";
 import type { OffreResumee } from "./offres";
 import type { ResumeOffreAlternance } from "./alternance";
 import { viderCacheTokens } from "./auth";
@@ -120,3 +120,72 @@ describe("rechercherAlternances", () => {
     expect(lba.searchParams.get("romes")).toBe("M1801");
   });
 });
+
+describe("fusionnerRecruteurs", () => {
+  test("La Bonne Boîte d'abord, recruteurs LBA ajoutés sauf SIRET déjà vu", () => {
+    const r = fusionnerRecruteurs(
+      [{ siret: "111", entreprise: "TRUSTTEAM", ville: "Maxéville", codePostal: "54320", effectif: "20 à 49 salariés", naf: null, codeRome: "M1801", potentielEmbauche: 3.55, fortPotentiel: false }],
+      [
+        { id: "a", entreprise: "TRUSTTEAM bis", adresse: "x", siret: "111", taille: null, naf: null, url: null, telephone: null },
+        { id: "b", entreprise: "ACME", adresse: "Nancy", siret: "222", taille: null, naf: null, url: "https://lba/b", telephone: null },
+      ],
+    );
+    expect(r.map((e) => [e.source, e.siret])).toEqual([
+      ["La Bonne Boîte", "111"],
+      ["La bonne alternance", "222"],
+    ]);
+    expect(r[0]?.adresse).toBe("54320 Maxéville");
+    expect(r[0]?.potentielEmbauche).toBe(3.55);
+    expect(r[1]?.potentielEmbauche).toBeNull();
+  });
+});
+
+describe("rechercherAlternances — recruteurs", () => {
+  test("inclureRecruteurs interroge La Bonne Boîte avec les codes ROME et la commune", async () => {
+    Bun.env.FT_CLIENT_ID = "test-id";
+    Bun.env.FT_CLIENT_SECRET = "test-secret";
+    Bun.env.LBA_API_KEY = "cle-test";
+    viderCacheTokens();
+    const urls: string[] = [];
+    // @ts-expect-error override de test
+    globalThis.fetch = (input: any) => {
+      const url = String(input);
+      urls.push(url);
+      const rep = (d: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(d), { status }));
+      if (url.includes("geo.api.gouv.fr")) return rep([NANCY]);
+      if (url.includes("/access_token")) return rep({ access_token: "T", expires_in: 1499 });
+      if (url.includes("/offresdemploi/")) return Promise.resolve(new Response(null, { status: 204 }));
+      if (url.includes("/job/v1/search")) {
+        return rep({ jobs: [], recruiters: [{ identifier: { id: "R1" }, workplace: { name: "ACME", siret: "222" } }], warnings: [] });
+      }
+      if (url.includes("/labonneboite/v2/recherche")) {
+        return rep({ hits: 1, items: [{ siret: "111", company_name: "TRUSTTEAM", hiring_potential: 3.5 }] });
+      }
+      throw new Error("URL inattendue " + url);
+    };
+
+    const r = await rechercherAlternances({ ville: "Nancy", romes: "M1801,M1830", inclureRecruteurs: true });
+    expect(r.recruteurs.map((e) => e.siret)).toEqual(["111", "222"]);
+    const lbb = new URL(urls.find((u) => u.includes("/labonneboite/"))!);
+    expect(lbb.searchParams.getAll("rome")).toEqual(["M1801", "M1830"]);
+    expect(lbb.searchParams.get("citycode")).toBe("54395");
+    expect(lbb.searchParams.get("distance")).toBe("30");
+  });
+
+  test("sans codes ROME : pas d'appel La Bonne Boîte, avertissement explicite", async () => {
+    Bun.env.LBA_API_KEY = "cle-test";
+    delete Bun.env.FT_CLIENT_ID;
+    const urls: string[] = [];
+    // @ts-expect-error override de test
+    globalThis.fetch = (input: any) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("geo.api.gouv.fr")) return Promise.resolve(new Response(JSON.stringify([NANCY])));
+      return Promise.resolve(new Response(JSON.stringify({ jobs: [], recruiters: [], warnings: [] })));
+    };
+    const r = await rechercherAlternances({ ville: "Nancy", inclureRecruteurs: true });
+    expect(urls.some((u) => u.includes("/labonneboite/"))).toBe(false);
+    expect(r.avertissements.some((a) => a.includes("préciser `romes`"))).toBe(true);
+  });
+});
+

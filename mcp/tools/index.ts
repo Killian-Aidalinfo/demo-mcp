@@ -7,6 +7,8 @@ import { enregistrerToolsStats } from "./stats";
 import { enregistrerToolsReferentiels } from "./referentiels";
 import { enregistrerToolsAlternance } from "./alternance";
 import { enregistrerToolsRecherche } from "./recherche";
+import { enregistrerToolsEntreprises } from "./entreprises";
+import { enregistrerToolsMetiers } from "./metiers";
 
 export function enregistrerTousLesTools(server: McpServer): void {
   enregistrerToolsOffres(server);
@@ -14,4 +16,6 @@ export function enregistrerTousLesTools(server: McpServer): void {
   enregistrerToolsReferentiels(server);
   enregistrerToolsAlternance(server);
   enregistrerToolsRecherche(server);
+  enregistrerToolsEntreprises(server);
+  enregistrerToolsMetiers(server);
 }

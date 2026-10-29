@@ -7,6 +7,10 @@
  *
  * Une source en erreur (identifiants absents, quota…) n'empêche pas l'autre de
  * répondre : l'erreur est renvoyée dans `avertissements`.
+ *
+ * Avec `inclureRecruteurs`, les entreprises à potentiel d'embauche viennent de
+ * La Bonne Boîte (France Travail, si des codes ROME sont donnés) et des
+ * recruteurs de La bonne alternance, dédoublonnés par SIRET.
  */
 import { localiserCommunes, type Commune } from "./geo";
 import { normaliser, rechercherOffresEnAlternance, resumerOffre, type OffreResumee } from "./offres";
@@ -17,6 +21,12 @@ import {
   type ResumeOffreAlternance,
   type ResumeRecruteur,
 } from "./alternance";
+import {
+  dedoublonnerEntreprises,
+  rechercherEntreprisesQuiRecrutent,
+  resumerEntrepriseLbb,
+  type ResumeEntrepriseLbb,
+} from "./labonneboite";
 
 export type OffreUnifiee = {
   source: string;
@@ -121,6 +131,46 @@ export function fusionnerAlternances(
   return { offres, doublonsRetires };
 }
 
+/** Recruteur potentiel, quelle que soit sa source. */
+export type RecruteurUnifie = ResumeRecruteur & {
+  source: "La Bonne Boîte" | "La bonne alternance";
+  /** Potentiel d'embauche estimé par La Bonne Boîte (null pour La bonne alternance). */
+  potentielEmbauche: number | null;
+};
+
+export function unifierEntrepriseLbb(e: ResumeEntrepriseLbb): RecruteurUnifie {
+  return {
+    source: "La Bonne Boîte",
+    id: e.siret,
+    entreprise: e.entreprise,
+    adresse: [e.codePostal, e.ville].filter(Boolean).join(" ") || null,
+    siret: e.siret,
+    taille: e.effectif,
+    naf: e.naf,
+    url: null,
+    telephone: null,
+    potentielEmbauche: e.potentielEmbauche,
+  };
+}
+
+/**
+ * Fusionne les recruteurs des deux sources (fonction pure) : La Bonne Boîte d'abord
+ * (une ligne par SIRET, triée par potentiel d'embauche), puis ceux de La bonne alternance absents par SIRET.
+ */
+export function fusionnerRecruteurs(
+  lbb: ResumeEntrepriseLbb[],
+  lba: ResumeRecruteur[],
+): RecruteurUnifie[] {
+  const recruteurs = dedoublonnerEntreprises(lbb).map(unifierEntrepriseLbb);
+  const siretsVus = new Set(recruteurs.map((r) => r.siret).filter(Boolean) as string[]);
+  for (const r of lba) {
+    if (r.siret && siretsVus.has(r.siret)) continue;
+    if (r.siret) siretsVus.add(r.siret);
+    recruteurs.push({ ...r, source: "La bonne alternance", potentielEmbauche: null });
+  }
+  return recruteurs;
+}
+
 export type CriteresAlternances = {
   /** Nom, code postal ou code INSEE de la ville autour de laquelle chercher. */
   ville: string;
@@ -142,7 +192,7 @@ export type ResultatAlternances = {
   offres: OffreUnifiee[];
   parSource: { franceTravail: number | null; laBonneAlternance: number | null };
   doublonsRetires: number;
-  recruteurs: ResumeRecruteur[];
+  recruteurs: RecruteurUnifie[];
   avertissements: string[];
 };
 
@@ -156,7 +206,10 @@ export async function rechercherAlternances(c: CriteresAlternances): Promise<Res
   const rayon = c.rayonKm ?? 30;
   const max = c.maxParSource ?? 100;
 
-  const [ft, lba] = await Promise.allSettled([
+  const codesRome = (c.romes ?? "").split(",").map((r) => r.trim()).filter(Boolean);
+  const avecLbb = Boolean(c.inclureRecruteurs && codesRome.length);
+
+  const [ft, lba, lbb] = await Promise.allSettled([
     rechercherOffresEnAlternance(
       {
         commune: commune.codeInsee,
@@ -176,6 +229,14 @@ export async function rechercherAlternances(c: CriteresAlternances): Promise<Res
           target_diploma_level: c.niveauDiplome,
         })
       : Promise.reject(new Error(`Coordonnées GPS inconnues pour ${commune.nom}.`)),
+    avecLbb
+      ? rechercherEntreprisesQuiRecrutent({
+          romes: codesRome,
+          codeInsee: commune.codeInsee,
+          distanceKm: rayon,
+          parPage: 100,
+        })
+      : Promise.resolve(null),
   ]);
 
   const avertissements: string[] = [];
@@ -183,14 +244,22 @@ export async function rechercherAlternances(c: CriteresAlternances): Promise<Res
   if (ft.status === "rejected") avertissements.push(`France Travail indisponible : ${messageErreur(ft.reason)}`);
 
   let offresLba: ResumeOffreAlternance[] = [];
-  let recruteurs: ResumeRecruteur[] = [];
+  let recruteursLba: ResumeRecruteur[] = [];
   if (lba.status === "fulfilled") {
     offresLba = lba.value.offres.slice(0, max).map((o) => resumerOffreAlternance(o));
-    if (c.inclureRecruteurs) recruteurs = lba.value.recruteurs.map(resumerRecruteur);
+    if (c.inclureRecruteurs) recruteursLba = lba.value.recruteurs.map(resumerRecruteur);
     avertissements.push(...lba.value.avertissements.map((a) => `La bonne alternance : ${a.message}`));
   } else {
     avertissements.push(`La bonne alternance indisponible : ${messageErreur(lba.reason)}`);
   }
+
+  const entreprisesLbb =
+    lbb.status === "fulfilled" ? (lbb.value?.entreprises ?? []).map(resumerEntrepriseLbb) : [];
+  if (lbb.status === "rejected") avertissements.push(`La Bonne Boîte indisponible : ${messageErreur(lbb.reason)}`);
+  if (c.inclureRecruteurs && !codesRome.length) {
+    avertissements.push("La Bonne Boîte non interrogée : préciser `romes` pour obtenir les entreprises à potentiel d'embauche.");
+  }
+  const recruteurs = fusionnerRecruteurs(entreprisesLbb, recruteursLba);
 
   const { offres, doublonsRetires } = fusionnerAlternances(offresFt, offresLba);
   return {

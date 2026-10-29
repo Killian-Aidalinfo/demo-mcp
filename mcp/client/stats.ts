@@ -120,3 +120,71 @@ export async function detailsIndicateurs(): Promise<unknown> {
   }
   return res.json();
 }
+
+/**
+ * Typologies de salaire de l'indicateur SAL_3 (nomenclature TYPESALAIRE) :
+ * la répartition est faite par âge, pas par ancienneté.
+ */
+export const TYPES_SALAIRE: Record<string, string> = {
+  SAL1: "moins de 35 ans",
+  SAL2: "35 ans et plus",
+  SAL3: "tous âges",
+};
+
+type ValeursSalaireApi = {
+  codeActivite?: string;
+  libActivite?: string;
+  codePeriode?: string;
+  libPeriode?: string;
+  salaireValeurMontant?: { codeNomenclature?: string; valeurPrincipaleMontant?: number }[];
+};
+
+export type SalaireFap = {
+  /** Famille professionnelle (FAP) rattachée au code ROME. */
+  codeFap: string | null;
+  libelle: string | null;
+  periode: string | null;
+  moins35ans: number | null;
+  plus35ans: number | null;
+  tousAges: number | null;
+};
+
+/** Aplatit la réponse SAL_3 : une ligne par famille professionnelle (fonction pure). */
+export function resumerSalaires(data: { valeursParPeriode?: ValeursSalaireApi[] } | null): SalaireFap[] {
+  return (data?.valeursParPeriode ?? []).map((v) => {
+    const montant = (code: string) =>
+      v.salaireValeurMontant?.find((m) => m.codeNomenclature === code)?.valeurPrincipaleMontant ?? null;
+    return {
+      codeFap: v.codeActivite ?? null,
+      libelle: v.libActivite ?? null,
+      periode: v.codePeriode ?? v.libPeriode ?? null,
+      moins35ans: montant("SAL1"),
+      plus35ans: montant("SAL2"),
+      tousAges: montant("SAL3"),
+    };
+  });
+}
+
+/**
+ * Salaires mensuels des salariés en poste pour un métier ROME sur un territoire.
+ * Un code ROME correspond à une ou plusieurs familles professionnelles (FAP).
+ */
+export async function salairesMetier(
+  codeRome: string,
+  codeTypeTerritoire: string,
+  codeTerritoire: string,
+): Promise<{ libIndicateur: string | null; salaires: SalaireFap[] }> {
+  const token = await getToken(SCOPE_STATS);
+  await limiteur.acquire();
+  const params = new URLSearchParams({ codeRome: codeRome.trim().toUpperCase() });
+  const res = await fetch(
+    `${BASE}/indicateur/salaire-rome-fap/${encodeURIComponent(codeTypeTerritoire)}/${encodeURIComponent(codeTerritoire)}?${params}`,
+    { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } },
+  );
+  if (res.status === 204 || res.status === 404) return { libIndicateur: null, salaires: [] };
+  if (!res.ok) {
+    throw new Error(`Salaires ${codeRome} (${codeTypeTerritoire} ${codeTerritoire}) KO (${res.status}) : ${await res.text()}`);
+  }
+  const data = (await res.json()) as { libIndicateur?: string; valeursParPeriode?: ValeursSalaireApi[] };
+  return { libIndicateur: data.libIndicateur ?? null, salaires: resumerSalaires(data) };
+}

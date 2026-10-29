@@ -3,7 +3,8 @@
  *
  * L'API pagine via le paramètre `range=debut-fin` (index inclus), avec :
  *   - max 150 offres par page ;
- *   - un plafond d'index (~3150) : au-delà, l'API refuse la page.
+ *   - un plafond d'index de 3150 : une page doit commencer à 3000 au plus
+ *     (400 « La position de début doit être inférieure ou égale à 3000 » au-delà).
  *
  * Fonctions pures → testables sans réseau.
  */

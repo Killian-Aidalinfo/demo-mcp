@@ -43,7 +43,10 @@ export function enregistrerToolsRecherche(server: McpServer): void {
         inclureRecruteurs: z
           .boolean()
           .default(false)
-          .describe("Ajouter les entreprises susceptibles de recruter sans offre publiée (candidature spontanée)"),
+          .describe(
+            "Ajouter les entreprises susceptibles de recruter sans offre publiée (candidature spontanée) : " +
+              "La Bonne Boîte (si `romes` est renseigné) + recruteurs de La bonne alternance",
+          ),
       },
       outputSchema: {
         commune: z.any(),
@@ -63,7 +66,12 @@ export function enregistrerToolsRecherche(server: McpServer): void {
       const lignes = r.offres.slice(0, 40).map((o, i) => formaterOffreUnifiee(o, i + 1));
       const recruteurs = r.recruteurs
         .slice(0, 20)
-        .map((e) => `- ${e.entreprise ?? "?"} — ${e.adresse ?? "?"}${e.url ? ` · ${e.url}` : ""}`);
+        .map(
+          (e) =>
+            `- ${e.entreprise ?? "?"} — ${e.adresse ?? "?"} [${e.source}` +
+            `${e.potentielEmbauche !== null ? ` · potentiel ${e.potentielEmbauche}` : ""}]` +
+            `${e.siret ? ` · SIRET ${e.siret}` : ""}${e.url ? ` · ${e.url}` : ""}`,
+        );
       const texte = [
         `${r.offres.length} offre(s) d'alternance à ${criteres.rayonKm} km de ${r.commune.nom} ` +
           `(${sources} ; ${r.doublonsRetires} doublon(s) retiré(s))` +

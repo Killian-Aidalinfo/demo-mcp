@@ -1,8 +1,8 @@
 /**
  * Serveur MCP France Travail.
  *
- * Expose les APIs France Travail (Offres d'emploi v2 & Marché du travail) et
- * La bonne alternance (offres et formations en alternance) sous forme de tools
+ * Expose les APIs France Travail (Offres d'emploi v2, Marché du travail, La Bonne Boîte,
+ * ROMEO, ROME 4.0) et La bonne alternance (offres et formations en alternance) sous forme de tools
  * MCP, plus des tools « assistants » (localisation, référentiels, codes INSEE,
  * territoires) pour aider un modèle à construire des requêtes valides.
  *
@@ -22,7 +22,7 @@ import { enregistrerTousLesTools } from "./tools";
 export function creerServeur(): McpServer {
   const server = new McpServer({
     name: "france-travail",
-    version: "0.2.0",
+    version: "0.3.0",
   });
   enregistrerTousLesTools(server);
   return server;

@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from "bun:test";
-import { SCOPE_STATS, statistiquesMarche, listerTerritoires } from "./stats";
+import { SCOPE_STATS, statistiquesMarche, listerTerritoires, resumerSalaires, salairesMetier } from "./stats";
 import { viderCacheTokens } from "./auth";
 
 const fetchReel = globalThis.fetch;
@@ -81,5 +81,49 @@ describe("listerTerritoires", () => {
     };
     const t = await listerTerritoires("REG");
     expect(t[0]?.code).toBe("84");
+  });
+});
+
+describe("resumerSalaires", () => {
+  test("une ligne par FAP, montants SAL1/SAL2/SAL3", () => {
+    const r = resumerSalaires({
+      valeursParPeriode: [
+        {
+          codeActivite: "M1Z81",
+          libActivite: "Techniciens de production en informatique",
+          codePeriode: "2022",
+          salaireValeurMontant: [
+            { codeNomenclature: "SAL1", valeurPrincipaleMontant: 2459 },
+            { codeNomenclature: "SAL2", valeurPrincipaleMontant: 3235 },
+            { codeNomenclature: "SAL3", valeurPrincipaleMontant: 2888 },
+          ],
+        },
+      ],
+    });
+    expect(r).toEqual([
+      { codeFap: "M1Z81", libelle: "Techniciens de production en informatique", periode: "2022", moins35ans: 2459, plus35ans: 3235, tousAges: 2888 },
+    ]);
+  });
+
+  test("réponse vide ou montant manquant", () => {
+    expect(resumerSalaires(null)).toEqual([]);
+    expect(resumerSalaires({ valeursParPeriode: [{ codeActivite: "X", salaireValeurMontant: [] }] })[0]?.tousAges).toBeNull();
+  });
+});
+
+describe("salairesMetier", () => {
+  test("GET salaire-rome-fap/{type}/{code}?codeRome=", async () => {
+    let url = "";
+    // @ts-expect-error override de test
+    globalThis.fetch = async (u: any) => {
+      if (String(u).includes("/access_token")) {
+        return new Response(JSON.stringify({ access_token: "T", expires_in: 1499 }), { status: 200 });
+      }
+      url = String(u);
+      return new Response(JSON.stringify({ libIndicateur: "SAL_3", valeursParPeriode: [] }), { status: 200 });
+    };
+    const r = await salairesMetier("m1801", "DEP", "54");
+    expect(url).toEndWith("/indicateur/salaire-rome-fap/DEP/54?codeRome=M1801");
+    expect(r.libIndicateur).toBe("SAL_3");
   });
 });

@@ -20,7 +20,9 @@ Recherche d'offres selon des critères de sélection, avec résultats paginés.
   - `resultats` : liste détaillée des offres correspondant aux critères.
   - `filtresPossibles` : agrégats (compteurs) par valeur de filtre (utile pour des facettes).
 - **Pagination** : via le paramètre `range` (`début-fin`, ex. `0-149`).
-  - 150 offres max par appel ; **1150 offres max** au total (`range` jusqu'à `1000-1149`).
+  - 150 offres max par appel ; **3150 offres max** au total : la position de début doit être
+    ≤ 3000 (`range` jusqu'à `3000-3149`, sinon 400 « La position de début doit être inférieure ou
+    égale à 3000. »). Mesuré le 29/10/2026 ; l'ancienne limite documentée était 1000-1149.
   - L'en-tête de réponse `Content-Range` renvoie ex. `offres 0-149/287543` (total disponible).
 - **Codes HTTP** : `200` (résultats complets), `206` (résultats partiels/paginés), `204` (aucun résultat).
 

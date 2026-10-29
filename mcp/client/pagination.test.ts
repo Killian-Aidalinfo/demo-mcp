@@ -31,6 +31,14 @@ describe("calculerDebutsPages", () => {
   });
 });
 
+describe("plafond réel de l'API (mesuré le 2026-10-29)", () => {
+  test("dernier début de page = 3000 : l'API refuse au-delà (« position de début ≤ 3000 »)", () => {
+    const debuts = calculerDebutsPages(14847);
+    expect(debuts.at(-1)).toBe(3000);
+    expect(construireRange(3000)).toBe("3000-3149");
+  });
+});
+
 describe("construireRange", () => {
   test("borne fin incluse", () => {
     expect(construireRange(0)).toBe("0-149");
