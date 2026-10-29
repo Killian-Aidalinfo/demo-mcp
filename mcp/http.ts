@@ -16,21 +16,18 @@
  *   PORT        port d'écoute (défaut 3000)
  *   MCP_PATH    chemin de l'endpoint MCP (défaut /mcp)
  *   FT_CLIENT_ID / FT_CLIENT_SECRET  identifiants API France Travail
+ *   LBA_API_KEY                      clé API La bonne alternance
  *
  * Nécessite le runtime Bun (utilise `Bun.serve`).
  */
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { creerServeur } from "./index";
+import { creerServeur, avertirIdentifiantsManquants } from "./index";
 
 export function demarrerServeurHttp() {
   const port = Number(process.env.PORT ?? 3000);
   const mcpPath = process.env.MCP_PATH ?? "/mcp";
 
-  if (!process.env.FT_CLIENT_ID || !process.env.FT_CLIENT_SECRET) {
-    console.error(
-      "⚠️  FT_CLIENT_ID / FT_CLIENT_SECRET absents de l'environnement — les appels API échoueront.",
-    );
-  }
+  avertirIdentifiantsManquants();
 
   const serveur = Bun.serve({
     port,

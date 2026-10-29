@@ -30,10 +30,15 @@ export type Offre = {
   typeContrat?: string;
   typeContratLibelle?: string;
   natureContrat?: string;
+  alternance?: boolean;
   romeCode?: string;
   romeLibelle?: string;
   salaire?: { libelle?: string };
   dateCreation?: string;
+  dateActualisation?: string;
+  experienceLibelle?: string;
+  formations?: { niveauLibelle?: string; domaineLibelle?: string }[];
+  origineOffre?: { urlOrigine?: string; partenaires?: { nom?: string; url?: string }[] };
   [k: string]: unknown;
 };
 
@@ -44,13 +49,75 @@ export type CriteresRecherche = {
   departement?: string;
   region?: string;
   codeROME?: string;
+  appellation?: string;
   typeContrat?: string;
   natureContrat?: string;
+  niveauFormation?: string;
+  experience?: string;
+  qualification?: string;
   distance?: number;
+  inclureLimitrophes?: boolean;
   publieeDepuis?: number;
+  minCreationDate?: string;
+  maxCreationDate?: string;
   tempsPlein?: boolean;
   salaireMin?: number;
+  sort?: number;
 };
+
+/**
+ * Natures de contrat d'alternance dans le référentiel `naturesContrats`
+ * (E2 = contrat d'apprentissage, FS = contrat de professionnalisation).
+ */
+export const NATURES_ALTERNANCE = ["E2", "FS"] as const;
+
+/** URL publique d'une offre : site d'origine si partenaire, sinon fiche France Travail. */
+export function urlOffre(o: Offre): string | null {
+  return (
+    o.origineOffre?.urlOrigine ??
+    (o.id ? `https://candidat.francetravail.fr/offres/recherche/detail/${o.id}` : null)
+  );
+}
+
+/** Offre réduite aux champs utiles à un modèle (évite de renvoyer l'objet brut, très verbeux). */
+export type OffreResumee = {
+  id: string | null;
+  intitule: string | null;
+  entreprise: string | null;
+  lieu: string | null;
+  codePostal: string | null;
+  contrat: string | null;
+  natureContrat: string | null;
+  alternance: boolean;
+  codeRome: string | null;
+  experience: string | null;
+  formation: string | null;
+  salaire: string | null;
+  datePublication: string | null;
+  url: string | null;
+};
+
+export function resumerOffre(o: Offre): OffreResumee {
+  const formation = o.formations?.[0];
+  return {
+    id: o.id ?? null,
+    intitule: o.intitule ?? null,
+    entreprise: o.entreprise?.nom ?? null,
+    lieu: o.lieuTravail?.libelle ?? null,
+    codePostal: o.lieuTravail?.codePostal ?? null,
+    contrat: o.typeContratLibelle ?? o.typeContrat ?? null,
+    natureContrat: o.natureContrat ?? null,
+    alternance: o.alternance === true,
+    codeRome: o.romeCode ?? null,
+    experience: o.experienceLibelle ?? null,
+    formation: formation
+      ? [formation.niveauLibelle, formation.domaineLibelle].filter(Boolean).join(" — ") || null
+      : null,
+    salaire: o.salaire?.libelle ?? null,
+    datePublication: o.dateCreation ?? null,
+    url: urlOffre(o),
+  };
+}
 
 /** Transforme des critères typés en paramètres de query string (string only). */
 export function construireParamsRecherche(
@@ -115,6 +182,37 @@ export async function rechercherOffres(
   }
 
   return { total, recuperees: Math.min(offres.length, maxResultats), offres: offres.slice(0, maxResultats) };
+}
+
+/**
+ * Recherche les offres en alternance (apprentissage + professionnalisation).
+ * Une requête par nature de contrat, puis fusion sans doublon, plus récentes d'abord.
+ */
+export async function rechercherOffresEnAlternance(
+  criteres: Omit<CriteresRecherche, "natureContrat">,
+  maxResultats = 150,
+): Promise<{ total: number; recuperees: number; offres: Offre[] }> {
+  const parNature = await Promise.all(
+    NATURES_ALTERNANCE.map((natureContrat) =>
+      rechercherOffres({ ...criteres, natureContrat }, maxResultats),
+    ),
+  );
+  const vues = new Set<string>();
+  const offres: Offre[] = [];
+  for (const r of parNature) {
+    for (const o of r.offres) {
+      if (o.id && vues.has(o.id)) continue;
+      if (o.id) vues.add(o.id);
+      offres.push(o);
+    }
+  }
+  offres.sort((a, b) => (b.dateCreation ?? "").localeCompare(a.dateCreation ?? ""));
+  const total = parNature.reduce((somme, r) => somme + r.total, 0);
+  return {
+    total,
+    recuperees: Math.min(offres.length, maxResultats),
+    offres: offres.slice(0, maxResultats),
+  };
 }
 
 /** Consulte le détail complet d'une offre par son identifiant. */

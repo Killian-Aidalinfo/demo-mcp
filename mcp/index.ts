@@ -1,15 +1,16 @@
 /**
  * Serveur MCP France Travail.
  *
- * Expose les APIs France Travail (Offres d'emploi v2 & Marché du travail) sous
- * forme de tools MCP, plus des tools « assistants » (référentiels, codes INSEE,
+ * Expose les APIs France Travail (Offres d'emploi v2 & Marché du travail) et
+ * La bonne alternance (offres et formations en alternance) sous forme de tools
+ * MCP, plus des tools « assistants » (localisation, référentiels, codes INSEE,
  * territoires) pour aider un modèle à construire des requêtes valides.
  *
  * Lancement :
  *   - stdio (défaut, pour npx / install npm) : `bun mcp/index.ts`
  *   - HTTP (pour Docker / Coolify)           : `MCP_TRANSPORT=http bun mcp/index.ts`
  *                                              ou `bun mcp/index.ts --http`
- * Pré-requis : FT_CLIENT_ID / FT_CLIENT_SECRET dans .env (cf. README).
+ * Pré-requis : FT_CLIENT_ID / FT_CLIENT_SECRET et/ou LBA_API_KEY dans .env (cf. README).
  *
  * ⚠️ stdio : stdout est réservé au JSON-RPC. Tous les logs vont sur stderr.
  */
@@ -21,10 +22,24 @@ import { enregistrerTousLesTools } from "./tools";
 export function creerServeur(): McpServer {
   const server = new McpServer({
     name: "france-travail",
-    version: "1.0.0",
+    version: "0.2.0",
   });
   enregistrerTousLesTools(server);
   return server;
+}
+
+/** Signale sur stderr les sources inutilisables faute d'identifiants (le serveur démarre quand même). */
+export function avertirIdentifiantsManquants(): void {
+  if (!process.env.FT_CLIENT_ID || !process.env.FT_CLIENT_SECRET) {
+    console.error(
+      "⚠️  FT_CLIENT_ID / FT_CLIENT_SECRET absents de l'environnement — les tools France Travail échoueront.",
+    );
+  }
+  if (!process.env.LBA_API_KEY) {
+    console.error(
+      "⚠️  LBA_API_KEY absente de l'environnement — les tools La bonne alternance échoueront.",
+    );
+  }
 }
 
 /** Vrai si le transport HTTP est demandé (env `MCP_TRANSPORT=http` ou flag `--http`). */
@@ -44,11 +59,7 @@ async function main() {
     return;
   }
 
-  if (!process.env.FT_CLIENT_ID || !process.env.FT_CLIENT_SECRET) {
-    console.error(
-      "⚠️  FT_CLIENT_ID / FT_CLIENT_SECRET absents de l'environnement — les appels API échoueront.",
-    );
-  }
+  avertirIdentifiantsManquants();
   const server = creerServeur();
   const transport = new StdioServerTransport();
   await server.connect(transport);

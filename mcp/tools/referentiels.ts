@@ -11,8 +11,44 @@ import {
   chercherDansReferentiel,
 } from "../client/offres";
 import { listerTerritoires } from "../client/stats";
+import { localiserCommunes } from "../client/geo";
 
 export function enregistrerToolsReferentiels(server: McpServer): void {
+  server.registerTool(
+    "localiser_commune",
+    {
+      description:
+        "Localise une commune française à partir de son nom, code postal ou code INSEE (API publique " +
+        "geo.api.gouv.fr, sans clé). Renvoie en un appel le code INSEE (pour `rechercher_offres`, param " +
+        "`commune`), le département et les coordonnées GPS (pour `rechercher_offres_alternance`, params " +
+        "`latitude`/`longitude`). À utiliser en premier pour toute recherche autour d'une ville.",
+      inputSchema: {
+        recherche: z.string().describe("Nom (ex. « Nancy »), code postal (54000) ou code INSEE (54395)"),
+        limite: z.number().int().min(1).max(20).default(5),
+      },
+      outputSchema: {
+        communes: z.array(z.any()),
+      },
+    },
+    async ({ recherche, limite }) => {
+      const communes = await localiserCommunes(recherche, limite);
+      const texte = communes.length
+        ? communes
+            .map(
+              (c) =>
+                `${c.nom} (${c.departement}) — INSEE ${c.codeInsee}, CP ${c.codesPostaux.join("/") || "?"}, ` +
+                `lat ${c.latitude ?? "?"}, lon ${c.longitude ?? "?"}` +
+                (c.population ? `, ${c.population} hab.` : ""),
+            )
+            .join("\n")
+        : `Aucune commune trouvée pour « ${recherche} ».`;
+      return {
+        content: [{ type: "text", text: texte }],
+        structuredContent: { communes },
+      };
+    },
+  );
+
   server.registerTool(
     "chercher_code_insee",
     {

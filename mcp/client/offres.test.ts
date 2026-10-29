@@ -7,6 +7,8 @@ import {
   consulterOffre,
   getReferentiel,
   chercherDansReferentiel,
+  resumerOffre,
+  rechercherOffresEnAlternance,
   type EntreeReferentiel,
 } from "./offres";
 import { viderCacheTokens } from "./auth";
@@ -147,5 +149,60 @@ describe("getReferentiel / chercherDansReferentiel", () => {
     expect(tous.length).toBe(2);
     const lyon = await chercherDansReferentiel("communes", "lyon");
     expect(lyon).toEqual([{ code: "69381", libelle: "Lyon 1er" }]);
+  });
+});
+
+describe("resumerOffre", () => {
+  test("garde les champs utiles et construit le lien", () => {
+    const r = resumerOffre({
+      id: "200ABC",
+      intitule: "Alternant administrateur systèmes et réseaux (H/F)",
+      entreprise: { nom: "ACME" },
+      lieuTravail: { libelle: "54 - NANCY", codePostal: "54000" },
+      typeContratLibelle: "Contrat à durée déterminée - 24 Mois",
+      natureContrat: "Contrat apprentissage",
+      alternance: true,
+      formations: [{ niveauLibelle: "Bac+3, Bac+4 ou équivalents", domaineLibelle: "Réseaux" }],
+      dateCreation: "2026-10-20T10:00:00.000Z",
+    });
+    expect(r.alternance).toBe(true);
+    expect(r.entreprise).toBe("ACME");
+    expect(r.formation).toBe("Bac+3, Bac+4 ou équivalents — Réseaux");
+    expect(r.url).toBe("https://candidat.francetravail.fr/offres/recherche/detail/200ABC");
+  });
+
+  test("préfère l'URL d'origine d'une offre partenaire", () => {
+    expect(resumerOffre({ id: "1", origineOffre: { urlOrigine: "https://partenaire/1" } }).url).toBe(
+      "https://partenaire/1",
+    );
+  });
+});
+
+describe("rechercherOffresEnAlternance", () => {
+  test("interroge E2 et FS, fusionne sans doublon, plus récentes d'abord", async () => {
+    const natures: string[] = [];
+    mockFetch((url) => {
+      if (url.includes("/access_token")) return reponseToken();
+      const nature = new URL(url).searchParams.get("natureContrat") ?? "";
+      natures.push(nature);
+      const resultats =
+        nature === "E2"
+          ? [
+              { id: "A", dateCreation: "2026-10-01" },
+              { id: "B", dateCreation: "2026-10-03" },
+            ]
+          : [
+              { id: "B", dateCreation: "2026-10-03" },
+              { id: "C", dateCreation: "2026-10-02" },
+            ];
+      return new Response(JSON.stringify({ resultats }), {
+        status: 206,
+        headers: { "Content-Range": "offres 0-1/2" },
+      });
+    });
+    const r = await rechercherOffresEnAlternance({ departement: "54" }, 50);
+    expect(natures.sort()).toEqual(["E2", "FS"]);
+    expect(r.offres.map((o) => o.id)).toEqual(["B", "C", "A"]);
+    expect(r.recuperees).toBe(3);
   });
 });

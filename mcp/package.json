@@ -1,7 +1,7 @@
 {
   "name": "cesi-mcp-france-travail",
-  "version": "0.1.0",
-  "description": "Serveur MCP (stdio) exposant les APIs France Travail (Offres d'emploi v2 & Marché du travail) sous forme de tools.",
+  "version": "0.2.0",
+  "description": "Serveur MCP (stdio/HTTP) exposant les APIs France Travail (Offres d'emploi v2 & Marché du travail) et La bonne alternance (offres et formations en alternance) sous forme de tools.",
   "type": "module",
   "bin": {
     "cesi-mcp-france-travail": "dist/index.js"
@@ -24,7 +24,10 @@
     "france-travail",
     "pole-emploi",
     "offres-emploi",
-    "marche-du-travail"
+    "marche-du-travail",
+    "alternance",
+    "apprentissage",
+    "la-bonne-alternance"
   ],
   "license": "MIT",
   "repository": {
